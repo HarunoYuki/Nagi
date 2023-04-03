@@ -1,0 +1,146 @@
+cmake_minimum_required (VERSION 3.1)
+project (Nagi)
+
+SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON) 
+
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Configuration types" FORCE)
+
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+file(GLOB_RECURSE SHADERS
+    ${CMAKE_SOURCE_DIR}/src/shaders/*.glsl
+)
+
+file(GLOB_RECURSE SRC_FILES
+    ${CMAKE_SOURCE_DIR}/src/*.h
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+)
+
+file(GLOB_RECURSE EXT_FILES
+    ${CMAKE_SOURCE_DIR}/thirdparty/stb/*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/imgui/im*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/imgui/im*.cpp
+    ${CMAKE_SOURCE_DIR}/thirdparty/imguizmo/*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/imguizmo/*.cpp  
+    #${CMAKE_SOURCE_DIR}/thirdparty/RadeonRays/*.h 
+    #${CMAKE_SOURCE_DIR}/thirdparty/RadeonRays/*.cpp     
+    ${CMAKE_SOURCE_DIR}/thirdparty/oidn/*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/oidn/*.hpp
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinydir/*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinyobjloader/*.h
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinygltf/*.h
+	${CMAKE_SOURCE_DIR}/thirdparty/glad/*.c
+	${CMAKE_SOURCE_DIR}/thirdparty/glad/*.h
+)
+
+set(SRCS ${SRC_FILES} ${EXT_FILES} ${SHADERS})
+
+
+
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/loaders
+    ${CMAKE_SOURCE_DIR}/src/tests
+    ${CMAKE_SOURCE_DIR}/src/math
+    ${CMAKE_SOURCE_DIR}/thirdparty/stb
+    ${CMAKE_SOURCE_DIR}/thirdparty/imgui
+    ${CMAKE_SOURCE_DIR}/thirdparty/imguizmo
+    #${CMAKE_SOURCE_DIR}/thirdparty/RadeonRays
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinydir
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinygltf
+    ${CMAKE_SOURCE_DIR}/thirdparty/tinyobjloader
+    ${CMAKE_SOURCE_DIR}/thirdparty/oidn/include
+	${CMAKE_SOURCE_DIR}/thirdparty/glad
+	${CMAKE_SOURCE_DIR}/thirdparty/glfw/include
+)
+
+set(GLFW3_LIBRARIES "glfw3")
+set(GLFW3_LIBDIR ${CMAKE_SOURCE_DIR}/thirdparty/glfw/lib/x64)
+set(OIDN_LIBRARIES "OpenImageDenoise")
+set(OIDN_LIBDIR ${CMAKE_SOURCE_DIR}/thirdparty/oidn/lib)
+
+link_directories( ${GLFW3_LIBDIR} ${OIDN_LIBDIR} )
+find_package(OpenGL REQUIRED)
+
+foreach(f ${SRCS})
+    # Get the path of the file relative to ${DIRECTORY},
+    # then alter it (not compulsory)
+    file(RELATIVE_PATH SRCGR ${CMAKE_SOURCE_DIR} ${f})
+    set(SRCGR "Sources/${SRCGR}")
+
+    # Extract the folder, ie remove the filename part
+    string(REGEX REPLACE "(.*)(/[^/]*)$" "\\1" SRCGR ${SRCGR})
+
+    # Source_group expects \\ (double antislash), not / (slash)
+    string(REPLACE / \\ SRCGR ${SRCGR})
+    source_group("${SRCGR}" FILES ${f})
+endforeach()
+
+if(WIN32)
+set(GUI_TYPE WIN32)
+endif()
+
+if(MSVC)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
+
+SET(LINK_OPTIONS " ")
+SET(EXE_NAME "Nagi")
+
+ADD_EXECUTABLE(${EXE_NAME} ${SRCS})
+
+if(WIN32)
+TARGET_LINK_LIBRARIES(${EXE_NAME} ${OPENGL_LIBRARIES} ${GLFW3_LIBRARIES} ${OIDN_LIBRARIES})
+endif()
+
+#--------------------------------------------------------------------
+# preproc
+#--------------------------------------------------------------------
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+add_definitions(-D__STDC_FORMAT_MACROS)
+add_definitions(-DBX_CONFIG_ENABLE_MSVC_LEVEL4_WARNINGS=1)
+add_definitions(-D__STDC_LIMIT_MACROS)
+add_definitions(-D__STDC_CONSTANT_MACROS)
+add_definitions(-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+if(MSVC)
+add_definitions(-DWIN32)
+add_definitions(-D_WIN32)
+#add_definitions(-DNOMINMAX)
+endif()
+add_definitions(-DUSE_DL_PREFIX)
+add_definitions(-DGLAD_STATIC)
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
+
+#--------------------------------------------------------------------
+# output dirs
+#--------------------------------------------------------------------
+
+set_target_properties(${EXE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR} )
+set_target_properties(${EXE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR} )
+set_target_properties(${EXE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_CURRENT_BINARY_DIR} )
+set_target_properties(${EXE_NAME} PROPERTIES DEBUG_POSTFIX "_d")
+set_target_properties(${EXE_NAME} PROPERTIES RELWITHDEBINFO_POSTFIX "RelWithDebInfo")
+set_target_properties(${EXE_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+if(WIN32)
+set_target_properties(${EXE_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+set_target_properties(${EXE_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+endif()
+
+#add_custom_command(TARGET ${EXE_NAME} POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets
+#)
+#add_custom_command(TARGET ${EXE_NAME} POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
+#)
+
+if(WIN32)
+add_custom_command(TARGET ${EXE_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${GLFW3_LIBDIR}/glfw3.lib ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${OIDN_LIBDIR}/OpenImageDenoise.dll ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${OIDN_LIBDIR}/tbb.dll ${CMAKE_CURRENT_BINARY_DIR}
+)
+endif()
