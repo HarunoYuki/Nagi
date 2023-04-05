@@ -41,10 +41,16 @@ set(SRCS ${SRC_FILES} ${EXT_FILES} ${SHADERS})
 
 
 include_directories(
+    ${CMAKE_SOURCE_DIR}/src/accelerators
+	${CMAKE_SOURCE_DIR}/src/cameras
     ${CMAKE_SOURCE_DIR}/src/core
-    ${CMAKE_SOURCE_DIR}/src/loaders
-    ${CMAKE_SOURCE_DIR}/src/tests
-    ${CMAKE_SOURCE_DIR}/src/math
+	${CMAKE_SOURCE_DIR}/src/lights
+    ${CMAKE_SOURCE_DIR}/src/main
+	${CMAKE_SOURCE_DIR}/src/materials
+	${CMAKE_SOURCE_DIR}/src/math
+	${CMAKE_SOURCE_DIR}/src/parser
+	${CMAKE_SOURCE_DIR}/src/sampler
+    ${CMAKE_SOURCE_DIR}/src/shaders
     ${CMAKE_SOURCE_DIR}/thirdparty/stb
     ${CMAKE_SOURCE_DIR}/thirdparty/imgui
     ${CMAKE_SOURCE_DIR}/thirdparty/imguizmo

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logger.h"
+#include "matrix.h"
 
 NAMESPACE_BEGIN(nagi)
 
@@ -10,6 +10,19 @@ public:
 
 private:
 
+};
+
+class MeshInstance
+{
+public:
+	MeshInstance();
+	~MeshInstance();
+
+	int meshId;
+	int materialId;
+
+	mat4 transform;
+	std::string name;
 };
 
 NAMESPACE_END(nagi)

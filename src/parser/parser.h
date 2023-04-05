@@ -1,18 +1,10 @@
 #include <iostream>
-#include "logger.h"
+#include "vector.h"
 
 NAMESPACE_BEGIN(nagi)
 
 class Scene;
-class RenderOptions;
 
-class Parser
-{
-public:
-	Parser() {}
-	~Parser() {}
-
-	bool ParseFromSceneFile(std::string sceneFile, Scene* scene, RenderOptions& renderOptions);
-};
+bool ParseFromSceneFile(std::string sceneFile, Scene* scene);
 
 NAMESPACE_END(nagi)
