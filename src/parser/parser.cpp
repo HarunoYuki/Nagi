@@ -3,21 +3,25 @@
 #include "scene.h"
 #include "material.h"
 #include "light.h"
+#include "camera.h"
+#include "mesh.h"
 
 NAMESPACE_BEGIN(nagi)
 
 static const int kMaxLineLength = 2048;
 
+//TODO: 对mat.alphaMode、mat.mediumType、light.type可以改用raytools中的判断枚举值的方法
+
 bool ParseFromSceneFile(std::string filename, Scene* scene)
 {
 	FILE* file = fopen(filename.c_str(), "r");
 	if (!file)
-		Error("Fail to open %s file", filename.c_str());
+		Error("Fail to open \"%s\" file", filename.c_str());
 
-	printf("Parse Scene From %s file \n", filename.c_str());
+	printf("Parse Scene From \"%s\" file.\n", filename.c_str());
 
 	std::map<std::string, uint16_t> materialMap;
-	std::string path = filename.substr(0, filename.find_last_of("/\\")) + "/";
+	std::string path = filename.substr(0, filename.find_last_of("/\\") + 1);
 
 	char line[kMaxLineLength];
 
@@ -77,33 +81,33 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 				sscanf(line, " alphaCutoff %f", &mat->alphaCutoff);
 			}
 
-			if (baseColorTexName != "none")
+			if (strcmp(baseColorTexName, "none") != 0)
 				mat->baseColorTexID = scene->AddTexture(path + baseColorTexName);
 
-			if (roughnessTexName != "none")
+			if (strcmp(roughnessTexName, "none") != 0)
 				mat->roughnessTexID = scene->AddTexture(path + roughnessTexName);
 
-			if (metallicTexName != "none")
+			if (strcmp(metallicTexName, "none") != 0)
 				mat->metallicTexID = scene->AddTexture(path + metallicTexName);
 
-			if (normalMapTexName != "none")
+			if (strcmp(normalMapTexName, "none") != 0)
 				mat->normalMapTexID = scene->AddTexture(path + normalMapTexName);
 
-			if (emissionMapTexName != "none")
+			if (strcmp(emissionMapTexName, "none") != 0)
 				mat->emissionMapTexID = scene->AddTexture(path + emissionMapTexName);
 
-			if (strcmp(alphaMode, "opaque"))
+			if (strcmp(alphaMode, "opaque") == 0)
 				mat->alphaMode = AlphaMode::Opaque;
-			else if (strcmp(alphaMode, "blend"))
+			else if (strcmp(alphaMode, "blend") == 0)
 				mat->alphaMode = AlphaMode::Blend;
-			else if (strcmp(alphaMode, "mask"))
+			else if (strcmp(alphaMode, "mask") == 0)
 				mat->alphaMode = AlphaMode::Mask;
 
-			if (strcmp(mediumType, "absorb"))
+			if (strcmp(mediumType, "absorb") == 0)
 				mat->mediumType = MediumType::Absorb;
-			else if (strcmp(mediumType, "scatter"))
+			else if (strcmp(mediumType, "scatter") == 0)
 				mat->mediumType = MediumType::Scatter;
-			else if (strcmp(mediumType, "emissive"))
+			else if (strcmp(mediumType, "emissive") == 0)
 				mat->mediumType = MediumType::Emissive;
 
 			if (materialMap.find(name) == materialMap.end())
@@ -113,23 +117,85 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 		if (strstr(line, "renderer"))
 		{
 			RenderOptions& options = *(scene->renderOptions);
+			char envMapName[200] = "none";
+
 			while (fgets(line, kMaxLineLength, file))
 			{
 				if (strchr(line,'}'))
 					break;
 
+				sscanf(line, " envmapFile %s", envMapName);
+				sscanf(line, " envmapIntensity %f", &options.envMapIntensity);
 				sscanf(line, " renderRes %d %d", &options.renderResolution.x, &options.renderResolution.y);
 				sscanf(line, " windowRes %d %d", &options.windowResolution.x, &options.windowResolution.y);
+				sscanf(line, " tileRes %d %d", &options.tileResolution.x, &options.tileResolution.y);
+				sscanf(line, " maxSpp %d", &options.maxSpp);
+				sscanf(line, " maxDepth %d", &options.maxDepth);
+				sscanf(line, " RRDepth %d", &options.RRDepth);
+				sscanf(line, " texArrayWidth %d", &options.texArrayWidth);
+				sscanf(line, " texArrayHeight %d", &options.texArrayHeight);
+				sscanf(line, " denoiserFrameCnt %d", &options.denoiserFrameCnt);
+				sscanf(line, " enableRR %d", &options.enableRR);
+				sscanf(line, " enableDenoiser %d", &options.enableDenoiser);
+				sscanf(line, " enableTonemap %d", &options.enableTonemap);
+				sscanf(line, " enableAces %d", &options.enableAces);
+				sscanf(line, " simpleAcesFit %d", &options.simpleAcesFit);
+				sscanf(line, " openglNormalMap %d", &options.openglNormalMap);
+				sscanf(line, " hideEmitters %d", &options.hideEmitters);
+				sscanf(line, " enableBackground %d", &options.enableBackground);
+				sscanf(line, " transparentBackground %d", &options.transparentBackground);
+				sscanf(line, " independentRenderSize %d", &options.independentRenderSize);
 			}
+
+			if (strcmp(envMapName, "none") == 0)
+				options.enableEnvMap = false;
+			else if (strcmp(envMapName, "none") != 0)
+			{
+				scene->AddEnvMap(path + envMapName);
+				options.enableEnvMap = true;
+			}
+
+			if (!options.independentRenderSize)
+				options.windowResolution = options.renderResolution;
 		}
 
 		if (strstr(line, "camera"))
 		{
+			mat4 xform;
+			bool matrixProvided = false;
+			vec3f pos, lookat;
+			float fov, focalDistance = 1.0f, lensRadius = 0.0f;
+
 			while (fgets(line, kMaxLineLength, file))
 			{
 				if (strchr(line, '}'))
 					break;
+
+				sscanf(line, " position %f %f %f", &pos.x, &pos.y, &pos.z);
+				sscanf(line, " lookat %f %f %f", &lookat.x, &lookat.y, &lookat.z);
+				sscanf(line, " fov %f", &fov);
+				sscanf(line, " focalDistance %f", &focalDistance);
+				sscanf(line, " lensRadius %f", &lensRadius);
+
+				if (sscanf(line, " matrix %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+					&xform[0][0], &xform[1][0], &xform[2][0], &xform[3][0],
+					&xform[0][1], &xform[1][1], &xform[2][1], &xform[3][1],
+					&xform[0][2], &xform[1][2], &xform[2][2], &xform[3][2],
+					&xform[0][3], &xform[1][3], &xform[2][3], &xform[3][3]
+				) != 0)
+					matrixProvided = true;
 			}
+
+			if (matrixProvided)
+			{
+				vec3f forward = vec3f(xform[2][0], xform[2][1], xform[2][2]);
+				pos = vec3f(xform[3][0], xform[3][1], xform[3][2]);
+				lookat = pos + forward;
+			}
+
+			scene->AddCamera(pos, lookat, fov);
+			scene->camera->focalDistance = focalDistance;
+			scene->camera->lensRadius = lensRadius;
 		}
 
 		if (strstr(line, "light"))
@@ -137,6 +203,7 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 			Light* light = new Light;
 			vec3f v1, v2;
 			char lightType[100] = "none";
+
 			while (fgets(line,kMaxLineLength,file))
 			{
 				if (strchr(line, '}'))
@@ -150,19 +217,19 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 				sscanf(line, " type %s", lightType);
 			}
 
-			if (lightType == "quad")
+			if (strcmp(lightType, "quad") == 0)
 			{
 				light->type = LightType::RectLight;
 				light->u = v1 - light->position;
 				light->v = v2 - light->position;
 				light->area = Cross(light->u, light->v).Length();
 			}
-			else if (lightType == "sphere")
+			else if (strcmp(lightType, "sphere") == 0)
 			{
 				light->type = LightType::SphereLight;
 				light->area = 4.0f * PI * light->radius * light->radius;
 			}
-			else if (lightType == "distant")
+			else if (strcmp(lightType, "distant") == 0)
 			{
 				light->type = LightType::DistantLight;
 				light->area = 0.0f;
@@ -173,12 +240,54 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 
 		if (strstr(line, "mesh"))
 		{
+			char meshName[100] = "none";
+			char matName[100] = "none";
+			mat4 xform, translate, scale, rotate;
+			vec4f rotQuat;
+			bool matrixProvided = false;
 
 			while (fgets(line, kMaxLineLength, file))
 			{
 				if (strchr(line, '}'))
 					break;
 
+				sscanf(line, " meshName %s", meshName);
+				sscanf(line, " matName %s", matName);
+				sscanf(line, " position %f %f %f", &translate.data[3][0], &translate.data[3][1], &translate.data[3][2]);
+				sscanf(line, " scale %f %f %f", &scale.data[0][0], &scale.data[1][1], &scale.data[2][2]);
+				if (sscanf(line, " rotation %f %f %f %f", &rotQuat.x, &rotQuat.y, &rotQuat.z, &rotQuat.w) != 0)
+					rotate = mat4::QuatToMatrix(rotQuat.x, rotQuat.y, rotQuat.z, rotQuat.w);
+				if (sscanf(line, " matrix %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+					&xform[0][0], &xform[1][0], &xform[2][0], &xform[3][0],
+					&xform[0][1], &xform[1][1], &xform[2][1], &xform[3][1],
+					&xform[0][2], &xform[1][2], &xform[2][2], &xform[3][2],
+					&xform[0][3], &xform[1][3], &xform[2][3], &xform[3][3]
+				) != 0)
+					matrixProvided = true;
+			}
+
+			if (strcmp(meshName, "none") != 0)
+			{
+				int meshID = scene->AddMesh(path + meshName);
+				if (meshID != -1)
+				{
+					MeshInstance* meshInstance = new MeshInstance;
+
+					meshInstance->meshID = meshID;
+					meshInstance->name = meshName;
+
+					if (materialMap.find(matName) != materialMap.end())
+						meshInstance->materialID = materialMap[matName];
+					else
+						printf("Could not find material \"%s\". Using default material\n", matName);
+
+					if (matrixProvided)
+						meshInstance->transform = xform;
+					else
+						meshInstance->transform = scale * rotate * translate;
+
+					scene->AddMeshInstance(meshInstance);
+				}
 			}
 		}
 	}

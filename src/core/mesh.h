@@ -1,5 +1,6 @@
 #pragma once
-
+#include <string>
+#include <vector>
 #include "matrix.h"
 
 NAMESPACE_BEGIN(nagi)
@@ -7,19 +8,26 @@ NAMESPACE_BEGIN(nagi)
 class Mesh
 {
 public:
+	Mesh() {}
+	~Mesh() {}
 
-private:
+	bool LoadMesh(std::string& filename);
 
+	std::string name;
+
+	std::vector<vec4f> verticesUVX;// Vertex + texture Coord (u/s)
+	std::vector<vec4f> normalsUVY;  // Normal + texture Coord (v/t)
 };
+
 
 class MeshInstance
 {
 public:
-	MeshInstance();
-	~MeshInstance();
+	MeshInstance() :meshID(-1), materialID(0), name("none") {}
+	~MeshInstance() {}
 
-	int meshId;
-	int materialId;
+	int meshID;
+	int materialID;
 
 	mat4 transform;
 	std::string name;

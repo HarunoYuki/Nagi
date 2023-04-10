@@ -47,7 +47,7 @@ void GetSceneFiles()
 		tinydir_file file;
 		tinydir_readfile_n(&dir, &file, i);
 
-		if (file.extension == "scene")
+		if (strcmp(file.extension, "scene") == 0)
 		{
 			sceneFiles.push_back(assetsDir + file.name);
 		}
@@ -66,7 +66,7 @@ void GetEnvMaps()
 		tinydir_file file;
 		tinydir_readfile_n(&dir, &file, i);
 
-		if (file.extension == "hdr")
+		if (strcmp(file.extension, "hdr") == 0)
 		{
 			envMaps.push_back(envMapsDir + file.name);
 		}
@@ -86,7 +86,7 @@ void CreateScene(std::string filename)
 		success = ParseFromSceneFile(filename, scene);
 
 	if (!success)
-		Error("Fail to load scene from %s file", filename.c_str());
+		Error("Fail to load scene from \"%s\" file", filename.c_str());
 
 	if (!scene->envMap && !envMaps.empty())
 	{
@@ -98,7 +98,13 @@ void CreateScene(std::string filename)
 
 bool initRenderer()
 {
-
+	delete renderer;
+	renderer = new Renderer(scene, shadersDir);
+	if (!renderer->initialized) {
+		delete renderer;
+		return false;
+	}
+	return true;
 }
 
 void MainLoop(GLFWwindow* window)
@@ -120,7 +126,7 @@ int main(int argc, char** argv) {
 		}
 		else if (arg[0] == '-')
 		{
-			Error("Unknown Option %s", arg.c_str());
+			Error("Unknown Option \"%s\"", arg.c_str());
 		}
 	}
 
@@ -177,11 +183,11 @@ int main(int argc, char** argv) {
 	if(!initRenderer())
 		Error("Fail to init Renderer!");
 
-	while (!glfwWindowShouldClose(window)) {
-		MainLoop(window);
-	}
+	//while (!glfwWindowShouldClose(window)) {
+	//	MainLoop(window);
+	//}
 
-	std::cout << "Render Done." << std::endl;
+	printf("Render Done.\n");
 	// Cleanup
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
@@ -189,5 +195,8 @@ int main(int argc, char** argv) {
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
+
+	if (scene) delete scene;
+	if (renderer) delete renderer;
 	return 0;
 }

@@ -8,5 +8,5 @@
 #endif
 
 #define Error(err) {\
-		printf("%s\n", std::string(err).c_str());\
+		printf("Error: %s\n", std::string(err).c_str());\
 		exit(1);}

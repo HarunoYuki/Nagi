@@ -45,35 +45,68 @@ Scene::~Scene()
 	lights.clear();
 }
 
-int Scene::AddCamera(vec3f pos, vec3f lookat, float fov)
+void Scene::AddCamera(vec3f pos, vec3f lookat, float fov)
 {
 	if (camera)
 		delete camera;
 	camera = new Camera(pos, lookat, fov);
 }
 
-int Scene::AddEnvMap(std::string& filename)
+void Scene::AddEnvMap(std::string& filename)
 {
 	if (envMap)
 		delete envMap;
-	//todo:
-	// load envmap 
-	//
-	// process fail
-	//return id
+
+	envMap = new EnvironmentMap;
+	if (envMap->LoadEnvMap(filename))
+		printf("HDR \"%s\" loaded\n", filename.c_str());
+	else {
+		printf("Unable to load \"%s\" HDR\n", filename.c_str());
+		delete envMap;
+		envMap = nullptr;
+	}
 }
 
 int Scene::AddTexture(std::string & filename)
 {
-	int id = -1;
+	// Check if texture was already loaded
+	for (size_t i = 0; i < textures.size(); i++)
+		if (textures[i]->name == filename)
+			return i;
 
+	int id = textures.size();
+	Texture* tex = new Texture;
+
+	printf("Loading texture \"%s\"\n", filename.c_str());
+	if (tex->LoadTexture(filename))
+		textures.push_back(tex);
+	else {
+		delete tex;
+		id = -1;
+		printf("Fail to load \"%s\" texture\n", filename.c_str());
+	}
 
 	return id;
 }
 
 int Scene::AddMesh(std::string & filename)
 {
-	int id = -1;
+	// Check if mesh was already loaded
+	for (size_t i = 0; i < meshes.size(); i++)
+		if (meshes[i]->name == filename)
+			return i;
+
+	int id = meshes.size();
+	Mesh* mesh = new Mesh;
+
+	printf("Loading mesh \"%s\"\n", filename.c_str());
+	if (mesh->LoadMesh(filename))
+		meshes.push_back(mesh);
+	else {
+		delete mesh;
+		id = -1;
+		printf("Fail to load \"%s\" mesh\n", filename.c_str());
+	}
 
 	return id;
 }

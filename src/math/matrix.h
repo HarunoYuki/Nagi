@@ -1,6 +1,7 @@
 #pragma once
 #include "vector.h"
 
+NAMESPACE_BEGIN(nagi)
 
 //template <class T>
 class Matrix44
@@ -107,3 +108,5 @@ public:
 };
 
 typedef Matrix44 mat4;
+
+NAMESPACE_END(nagi)

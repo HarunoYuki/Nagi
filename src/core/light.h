@@ -20,7 +20,7 @@ public:
 	vec3f u, v;
 	float radius;
 	float area;
-	LightType type;
+	float type;
 };
 
 NAMESPACE_END(nagi)

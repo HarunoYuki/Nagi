@@ -1,6 +1,8 @@
 #pragma once
 #include "logger.h"
 
+NAMESPACE_BEGIN(nagi)
+
 #define PI 3.14159265358979323846f
 
 template <class T>
@@ -146,6 +148,7 @@ public:
 	T x, y, z, w;
 	Vector4() { x = y = z = w = 0; }
 	Vector4(T xx, T yy, T zz, T ww) :x(xx), y(yy), z(zz), w(ww) {}
+	Vector4(Vector3<T> n, T ww) :x(n.x), y(n.y), z(n.z), w(ww) {}
 
 	bool operator==(const Vector4<T>& v) const { return x == v.x && y == v.y && z == v.z && w == v.w; }
 	bool operator!=(const Vector4<T>& v) const { return x != v.x || y != v.y || z != v.z || w != v.w; }
@@ -208,3 +211,24 @@ Vector3<T> Cross(const Vector3<T>& a, const Vector3<T>& b)
 		a.x * b.y - a.y * b.x
 		);
 }
+
+template <typename T>
+Vector3<T> Normalize(const Vector3<T>& d)
+{
+	float denominator = 1.0f / d.Length();
+	return d * denominator;
+}
+
+template <typename T>
+T Degrees(T r)
+{
+	return r * 180.0f / PI;
+}
+
+template <typename T>
+T Radians(T d)
+{
+	return d * PI / 180.0f;
+}
+
+NAMESPACE_END(nagi)
