@@ -5,16 +5,19 @@
 
 NAMESPACE_BEGIN(nagi)
 
+class BVHAccel;
+
 class Mesh
 {
 public:
-	Mesh() {}
-	~Mesh() {}
+	Mesh() :blasBVH(nullptr) {}
+	~Mesh() { if (blasBVH) delete blasBVH; }
 
 	bool LoadMesh(std::string& filename);
+	void BuildBVH();
 
+	BVHAccel* blasBVH;
 	std::string name;
-
 	std::vector<vec4f> verticesUVX;// Vertex + texture Coord (u/s)
 	std::vector<vec4f> normalsUVY;  // Normal + texture Coord (v/t)
 };

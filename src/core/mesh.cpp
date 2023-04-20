@@ -1,7 +1,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "mesh.h"
 #include "tiny_obj_loader.h"
-
+#include "bvh.h"
 
 NAMESPACE_BEGIN(nagi)
 
@@ -75,6 +75,21 @@ bool Mesh::LoadMesh(std::string& filename)
 	}
 
 	return true;
+}
+
+void Mesh::BuildBVH()
+{
+	const uint32_t trianglesNum = verticesUVX.size() / 3;
+	std::vector<bbox3f> bounds(trianglesNum);
+
+#pragma omp parallel for
+	for (uint32_t i = 0; i < trianglesNum; i++)
+	{
+		bounds[i].grow(vec3f(verticesUVX[i * 3 + 0]));
+		bounds[i].grow(vec3f(verticesUVX[i * 3 + 1]));
+		bounds[i].grow(vec3f(verticesUVX[i * 3 + 2]));
+	}
+	blasBVH = new BVHAccel(bounds);
 }
 
 

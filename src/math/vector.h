@@ -1,5 +1,6 @@
 #pragma once
 #include "logger.h"
+#include <algorithm>
 
 NAMESPACE_BEGIN(nagi)
 
@@ -11,6 +12,7 @@ class Vector2
 public:
 	T x, y;
 	Vector2() { x = y = 0; }
+	Vector2(T xx) { x = y = xx; }
 	Vector2(T xx, T yy) :x(xx), y(yy) {}
 
 	bool operator==(const Vector2<T>& v) const { return x == v.x && y == v.y; }
@@ -78,10 +80,13 @@ class Vector3
 public:
 	T x, y, z;
 	Vector3() { x = y = z = 0; }
+	Vector3(T xx) { x = y = z = xx; }
+	Vector3(Vector4<T>& v) { x = v.x, y = v.y, z = v.z; }
 	Vector3(T xx, T yy, T zz) :x(xx), y(yy), z(zz) {}
 
-	bool operator==(const Vector3<T>& v) const { return x == v.x && y == v.y && z == v.z; }
-	bool operator!=(const Vector3<T>& v) const { return x != v.x || y != v.y || z != v.z; }
+	bool operator ==(const Vector3<T>& v) const { return x == v.x && y == v.y && z == v.z; }
+	bool operator !=(const Vector3<T>& v) const { return x != v.x || y != v.y || z != v.z; }
+	bool operator <=(const Vector3<T>& v) const { return x <= v.x && y <= v.y && z <= v.z; }
 
 	Vector3<T> operator+(const Vector3<T>& v) const {
 		return Vector3(x + v.x, y + v.y, z + v.z);
@@ -147,6 +152,7 @@ class Vector4
 public:
 	T x, y, z, w;
 	Vector4() { x = y = z = w = 0; }
+	Vector4(T xx) { x = y = z = w = xx; }
 	Vector4(T xx, T yy, T zz, T ww) :x(xx), y(yy), z(zz), w(ww) {}
 	Vector4(Vector3<T> n, T ww) :x(n.x), y(n.y), z(n.z), w(ww) {}
 
@@ -229,6 +235,18 @@ template <typename T>
 T Radians(T d)
 {
 	return d * PI / 180.0f;
+}
+
+template <typename T>
+Vector3<T> Min(Vector3<T>& a, Vector3<T>& b)
+{
+	return Vector3<T>(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+}
+
+template <typename T>
+Vector3<T> Max(Vector3<T>& a, Vector3<T>& b)
+{
+	return Vector3<T>(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
 
 NAMESPACE_END(nagi)

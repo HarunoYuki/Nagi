@@ -15,6 +15,8 @@ public:
 	Renderer(Scene* scene, const std::string& shadersDir);
 	~Renderer();
 
+	void ResizeRenderer();
+	void ReloadShaders();
 
 	bool initialized = false;
 private:
@@ -36,10 +38,10 @@ protected:
 	GLuint verticesTex;
 	GLuint normalsBuffer;
 	GLuint normalsTex;
-	GLuint transformTex;
+	GLuint transformsTex;
 	GLuint lightsTex;
 	GLuint materialsTex;
-	GLuint texturesMapArrayTex;
+	GLuint textureMapsArrayTex;
 	GLuint envMapTex;
 	GLuint envMapCDFTex;
 

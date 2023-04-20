@@ -12,6 +12,8 @@ class Mesh;
 class MeshInstance;
 class Material;
 class Light;
+class BVHAccel;
+struct LinearBVHNode;
 
 struct RenderOptions
 {
@@ -71,10 +73,26 @@ public:
 	int AddTexture(std::string& filename);
 	int AddMesh(std::string& filename);
 	int AddMeshInstance(MeshInstance* meshInstance);
-	int AddMaterial(Material* mat);
-	int AddLight(Light* light);
+	int AddMaterial(const Material& mat);
+	int AddLight(const Light& light);
+
+	void CreateTLAS();
+	void CreateBLAS();
+	void Process();
+	void ProcessBLAS();
+	void ProcessTLAS();
+	void UpdateTLAS();
 
 public:
+	// TLAS, leaf is BLAS
+	BVHAccel* tlasBVH;
+	// 将TLAS与BLAS整合后的全部nodes
+	std::vector<LinearBVHNode> sceneNodes;
+	// TLAS开始的索引
+	uint32_t tlasStartOffset;
+	// 各个mesh的blasBVH在nodes中的开始索引
+	std::vector<uint32_t> blasBVHStartOffsets;
+
 	// RenderOptions is responsible for indicate render options.
 	RenderOptions* renderOptions;
 
@@ -92,17 +110,19 @@ public:
 	// this seperation which reduces the actual number of triangle mesh in the scene can really save memory usage.
 	std::vector<MeshInstance*> meshInstances;
 
+	// materials和lights可以存储指针，但是这些复数数据要利用glTexImage2D发送到gpu上
+	// 如果存储指针，没办法将复数对象的数据直接赋给glTexImage2D的data形参
 	// store all material
-	std::vector<Material*> materials;
+	std::vector<Material> materials;
 	// store all light
-	std::vector<Light*> lights;
+	std::vector<Light> lights;
 
 	// Texture Data
 	std::vector<Texture*> textures;
 	std::vector<unsigned char> textureMapsArray;
 
 	// scene data for all obj
-	std::vector<vec3i> vertIndices;
+	std::vector<vec3i> scenePrimsVertexIndices;
 	std::vector<vec4f> verticesUVX;// Vertex + texture Coord (u/s)
 	std::vector<vec4f> normalsUVY;  // Normal + texture Coord (v/t)
 	std::vector<mat4> transforms;

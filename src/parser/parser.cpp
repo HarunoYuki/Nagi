@@ -25,7 +25,7 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 
 	char line[kMaxLineLength];
 
-	Material* defaultMat = new Material;
+	Material defaultMat;
 	scene->AddMaterial(defaultMat);
 
 	while(fgets(line, kMaxLineLength, file))
@@ -40,7 +40,7 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 		// Material
 		if (sscanf(line, " material %s", name) == 1)
 		{
-			Material* mat = new Material;
+			Material mat;
 			char baseColorTexName[100] = "none";
 			char roughnessTexName[100] = "none";
 			char metallicTexName[100] = "none";
@@ -54,61 +54,61 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 				if (strchr(line, '}'))
 					break;
 
-				sscanf(line, " color %f %f %f", &mat->baseColor.x, &mat->baseColor.y, &mat->baseColor.z);
-				sscanf(line, " anisotropic %f", &mat->anisotropic);
-				sscanf(line, " emission %f %f %f", &mat->emission.x, &mat->emission.y, &mat->emission.z);
-				sscanf(line, " roughness %f", &mat->roughness);
-				sscanf(line, " metallic %f", &mat->metallic);
-				sscanf(line, " subsurface %f", &mat->subsurface);
-				sscanf(line, " specularTint %f", &mat->specularTint);
-				sscanf(line, " sheen %f", &mat->sheen);
-				sscanf(line, " sheenTint %f", &mat->sheenTint);
-				sscanf(line, " clearcoat %f", &mat->clearcoat);
-				sscanf(line, " clearcoatGloss %f", &mat->clearcoatGloss);
-				sscanf(line, " specTrans %f", &mat->specTrans);
-				sscanf(line, " ior %f", &mat->ior);
-				sscanf(line, " mediumType %f", &mat->mediumType);
-				sscanf(line, " mediumDensity %f", &mat->mediumDensity);
-				sscanf(line, " mediumColor %f %f %f", &mat->mediumColor.x, &mat->mediumColor.y, &mat->mediumColor.z);
-				sscanf(line, " mediumAnisotropy %f", &mat->mediumAnisotropy);
+				sscanf(line, " color %f %f %f", &mat.baseColor.x, &mat.baseColor.y, &mat.baseColor.z);
+				sscanf(line, " anisotropic %f", &mat.anisotropic);
+				sscanf(line, " emission %f %f %f", &mat.emission.x, &mat.emission.y, &mat.emission.z);
+				sscanf(line, " roughness %f", &mat.roughness);
+				sscanf(line, " metallic %f", &mat.metallic);
+				sscanf(line, " subsurface %f", &mat.subsurface);
+				sscanf(line, " specularTint %f", &mat.specularTint);
+				sscanf(line, " sheen %f", &mat.sheen);
+				sscanf(line, " sheenTint %f", &mat.sheenTint);
+				sscanf(line, " clearcoat %f", &mat.clearcoat);
+				sscanf(line, " clearcoatGloss %f", &mat.clearcoatGloss);
+				sscanf(line, " specTrans %f", &mat.specTrans);
+				sscanf(line, " ior %f", &mat.ior);
+				sscanf(line, " mediumType %f", &mat.mediumType);
+				sscanf(line, " mediumDensity %f", &mat.mediumDensity);
+				sscanf(line, " mediumColor %f %f %f", &mat.mediumColor.x, &mat.mediumColor.y, &mat.mediumColor.z);
+				sscanf(line, " mediumAnisotropy %f", &mat.mediumAnisotropy);
 				sscanf(line, " baseColorTex %s", baseColorTexName);
 				sscanf(line, " roughnessTex %s", roughnessTexName);
 				sscanf(line, " metallicTex %s", metallicTexName);
 				sscanf(line, " normalMapTex %s", normalMapTexName);
 				sscanf(line, " emissionTex %s", emissionMapTexName);
-				sscanf(line, " opacity %f", &mat->opacity);
-				sscanf(line, " alphaMode %f", &mat->alphaMode);
-				sscanf(line, " alphaCutoff %f", &mat->alphaCutoff);
+				sscanf(line, " opacity %f", &mat.opacity);
+				sscanf(line, " alphaMode %f", &mat.alphaMode);
+				sscanf(line, " alphaCutoff %f", &mat.alphaCutoff);
 			}
 
 			if (strcmp(baseColorTexName, "none") != 0)
-				mat->baseColorTexID = scene->AddTexture(path + baseColorTexName);
+				mat.baseColorTexID = scene->AddTexture(path + baseColorTexName);
 
 			if (strcmp(roughnessTexName, "none") != 0)
-				mat->roughnessTexID = scene->AddTexture(path + roughnessTexName);
+				mat.roughnessTexID = scene->AddTexture(path + roughnessTexName);
 
 			if (strcmp(metallicTexName, "none") != 0)
-				mat->metallicTexID = scene->AddTexture(path + metallicTexName);
+				mat.metallicTexID = scene->AddTexture(path + metallicTexName);
 
 			if (strcmp(normalMapTexName, "none") != 0)
-				mat->normalMapTexID = scene->AddTexture(path + normalMapTexName);
+				mat.normalMapTexID = scene->AddTexture(path + normalMapTexName);
 
 			if (strcmp(emissionMapTexName, "none") != 0)
-				mat->emissionMapTexID = scene->AddTexture(path + emissionMapTexName);
+				mat.emissionMapTexID = scene->AddTexture(path + emissionMapTexName);
 
 			if (strcmp(alphaMode, "opaque") == 0)
-				mat->alphaMode = AlphaMode::Opaque;
+				mat.alphaMode = Material::AlphaMode::Opaque;
 			else if (strcmp(alphaMode, "blend") == 0)
-				mat->alphaMode = AlphaMode::Blend;
+				mat.alphaMode = Material::AlphaMode::Blend;
 			else if (strcmp(alphaMode, "mask") == 0)
-				mat->alphaMode = AlphaMode::Mask;
+				mat.alphaMode = Material::AlphaMode::Mask;
 
 			if (strcmp(mediumType, "absorb") == 0)
-				mat->mediumType = MediumType::Absorb;
+				mat.mediumType = Material::MediumType::Absorb;
 			else if (strcmp(mediumType, "scatter") == 0)
-				mat->mediumType = MediumType::Scatter;
+				mat.mediumType = Material::MediumType::Scatter;
 			else if (strcmp(mediumType, "emissive") == 0)
-				mat->mediumType = MediumType::Emissive;
+				mat.mediumType = Material::MediumType::Emissive;
 
 			if (materialMap.find(name) == materialMap.end())
 				materialMap[name] = scene->AddMaterial(mat);
@@ -200,7 +200,7 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 
 		if (strstr(line, "light"))
 		{
-			Light* light = new Light;
+			Light light;
 			vec3f v1, v2;
 			char lightType[100] = "none";
 
@@ -209,30 +209,30 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 				if (strchr(line, '}'))
 					break;
 
-				sscanf(line, " position %f %f %f", &light->position.x, &light->position.y, &light->position.z);
-				sscanf(line, " emission %f %f %f", &light->emission.x, &light->emission.y, &light->emission.z);
+				sscanf(line, " position %f %f %f", &light.position.x, &light.position.y, &light.position.z);
+				sscanf(line, " emission %f %f %f", &light.emission.x, &light.emission.y, &light.emission.z);
 				sscanf(line, " v1 %f %f %f", &v1.x, &v1.y, &v1.z);
 				sscanf(line, " v2 %f %f %f", &v2.x, &v2.y, &v2.z);
-				sscanf(line, " radius %f", &light->radius);
+				sscanf(line, " radius %f", &light.radius);
 				sscanf(line, " type %s", lightType);
 			}
 
 			if (strcmp(lightType, "quad") == 0)
 			{
-				light->type = LightType::RectLight;
-				light->u = v1 - light->position;
-				light->v = v2 - light->position;
-				light->area = Cross(light->u, light->v).Length();
+				light.type = Light::LightType::RectLight;
+				light.u = v1 - light.position;
+				light.v = v2 - light.position;
+				light.area = Cross(light.u, light.v).Length();
 			}
 			else if (strcmp(lightType, "sphere") == 0)
 			{
-				light->type = LightType::SphereLight;
-				light->area = 4.0f * PI * light->radius * light->radius;
+				light.type = Light::LightType::SphereLight;
+				light.area = 4.0f * PI * light.radius * light.radius;
 			}
 			else if (strcmp(lightType, "distant") == 0)
 			{
-				light->type = LightType::DistantLight;
-				light->area = 0.0f;
+				light.type = Light::LightType::DistantLight;
+				light.area = 0.0f;
 			}
 
 			scene->AddLight(light);

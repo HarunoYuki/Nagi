@@ -3,19 +3,12 @@
 
 NAMESPACE_BEGIN(nagi)
 
-enum AlphaMode
-{
-	Opaque, Blend, Mask
-};
-
-enum MediumType
-{
-	None, Absorb, Scatter, Emissive
-};
-
 class Material
 {
 public:
+	enum AlphaMode { Opaque, Blend, Mask };
+	enum MediumType { None, Absorb, Scatter, Emissive };
+
 	Material() {
 		baseColor = vec3f(1.0f, 1.0f, 1.0f);
 		anisotropic = 0.0f;
