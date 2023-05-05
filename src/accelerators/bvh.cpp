@@ -39,11 +39,12 @@ bbox3f BVHAccel::WorldBound()
 	return nodes.empty() ? bbox3f() : nodes[0].bounds;
 }
 
-int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int start, int end)
+uint32_t BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int start, int end)
 {
 	if (start == end) Error("Start cannot equal to End in BVH building.");
+
 	// 记录node在nodes中的idx
-	int curNodeOffset = nodeCounts;
+	uint32_t curNodeOffset = nodeCounts;
 	LinearBVHNode& node = nodes[nodeCounts++];
 
 	// 计算[start, end)的bbox
@@ -51,10 +52,10 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 	for (int i = start; i < end; i++)
 		bound.grow(primitivesInfo[i].bounds);
 
-	int nPrimitives = end - start;
+	uint16_t nPrimitives = end - start;
 	if (nPrimitives == 1) {
 		// Create leaf _LinearBVHNode_
-		int firstPrimOffset = (int)orderedPrimsIndices.size();
+		uint32_t firstPrimOffset = (uint32_t)orderedPrimsIndices.size();
 		for (int i = start; i < end; i++)
 			orderedPrimsIndices.push_back(primitivesInfo[i].primitiveIdx);
 		node.InitLeaf(bound, firstPrimOffset, nPrimitives);
@@ -67,14 +68,14 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 			centroidBounds.grow(primitivesInfo[i].centroid);
 		int dim = centroidBounds.MaximumExtent();
 
-		// PBRT-V3 261 page 包围盒体积为空
+		// PBRT-V3 261 page 包围盒体积为空, 只有一个点
 		// If all of the centroid points are at the same position (i.e., the centroid bounds have zero volume),
 		// then recursion stops and a leaf node is created with the primitives; 
 		// none of the splitting methods here is effective in that (unusual) case.
 		if (centroidBounds.pMin[dim] == centroidBounds.pMax[dim])
 		{
 			// Create leaf _LinearBVHNode_
-			int firstPrimOffset = (int)orderedPrimsIndices.size();
+			uint32_t firstPrimOffset = (uint32_t)orderedPrimsIndices.size();
 			for (int i = start; i < end; i++)
 				orderedPrimsIndices.push_back(primitivesInfo[i].primitiveIdx);
 			node.InitLeaf(bound, firstPrimOffset, nPrimitives);
@@ -103,7 +104,7 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 			case SplitMethod::EuqalCounts: {
 				// 把子集划分为相同大小
 				mid = (start + end) / 2;
-				std::nth_element(&primitivesInfo[start], &primitivesInfo[mid], &primitivesInfo[end - 1] + 1, 
+				std::nth_element(&primitivesInfo[start], &primitivesInfo[mid], &primitivesInfo[end-1]+1, 
 					[dim](const BVHPrimitiveInfo& a, const BVHPrimitiveInfo& b) {
 						return a.centroid[dim] < b.centroid[dim];
 					});
@@ -117,7 +118,7 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 				{
 					// 把子集划分为相同大小
 					mid = (start + end) / 2;
-					std::nth_element(&primitivesInfo[start], &primitivesInfo[mid], &primitivesInfo[end - 1] + 1,
+					std::nth_element(&primitivesInfo[start], &primitivesInfo[mid], &primitivesInfo[end-1]+1,
 						[dim](const BVHPrimitiveInfo& a, const BVHPrimitiveInfo& b) {
 							return a.centroid[dim] < b.centroid[dim];
 						});
@@ -139,9 +140,9 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 
 					float minCost = std::numeric_limits<float>::max();
 					int minCostSplitBucket = -1;
-					float invNodeBoundArea = bound.SurfaceArea();
+					float invNodeBoundArea = 1.0f / bound.SurfaceArea();
 
-#ifdef USE_PBRT_COMPUTE_COST
+#ifdef USE_PBRT_SAH_COMPUTE_COST
 					// PBRT-V3 267 page. 复杂度O(n^2)
 					// 遍历所有划分可能，计算按某个bucket划分子集的cost
 					for (int i = 0; i < nBuckets - 1; i++)
@@ -201,7 +202,7 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 							minCostSplitBucket = i;
 						}
 					}
-#endif // USE_PBRT_COMPUTE_COST
+#endif // USE_PBRT_SAH_COMPUTE_COST
 
 					// Either create leaf or split primitives at selected SAH bucket
 					// 如果直接创建叶子，那么cost就是nPrimitives
@@ -219,7 +220,7 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 					}
 					else {
 						// Create leaf _LinearBVHNode_
-						int firstPrimOffset = (int)orderedPrimsIndices.size();
+						uint32_t firstPrimOffset = (uint32_t)orderedPrimsIndices.size();
 						for (int i = start; i < end; i++)
 							orderedPrimsIndices.push_back(primitivesInfo[i].primitiveIdx);
 						node.InitLeaf(bound, firstPrimOffset, nPrimitives);
@@ -241,7 +242,7 @@ int BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int 
 	return curNodeOffset;
 }
 
-int BVHAccel::HLBVHBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo)
+uint32_t BVHAccel::HLBVHBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo)
 {
 	// TODO: using SplitMethod::HLBVH to build BVH
 	return int();

@@ -6,6 +6,7 @@
 #include "material.h"
 #include "environmentMap.h"
 #include "shader.h"
+#include "bvh.h"
 
 NAMESPACE_BEGIN(nagi)
 
@@ -18,7 +19,7 @@ Program* LoadShaders(ShaderSource vert, ShaderSource frag)
 }
 
 Renderer::Renderer(Scene * scene, const std::string & shadersDir) 
-	: scene(scene), shadersDir(shadersDir),
+	: scene(scene), shadersDir(shadersDir), quad(new Quad),
 	// input
 	BVHBuffer(0), BVHTex(0), vertexIndicesBuffer(0), vertexIndicesTex(0), 
 	verticesBuffer(0), verticesTex(0), normalsBuffer(0), normalsTex(0), 
@@ -35,10 +36,12 @@ Renderer::Renderer(Scene * scene, const std::string & shadersDir)
 		return;
 	}
 
-	quad = new Quad;
-	//InitGPUDataBuffers();
-	//InitFBOs();
-	//InitShaders();
+	if (!scene->initialized)
+		scene->ProcessScene();
+
+	InitGPUDataBuffers();
+	InitFBOs();
+	InitShaders();
 
 	initialized = true;
 }
@@ -79,7 +82,7 @@ void Renderer::InitGPUDataBuffers()
 	// Create buffer and texture for BVH
 	glGenBuffers(1, &BVHBuffer);
 	glBindBuffer(GL_TEXTURE_BUFFER, BVHBuffer);
-	//glBufferData();
+	glBufferData(GL_TEXTURE_BUFFER, sizeof(LinearBVHNode)*scene->sceneNodes.size(), scene->sceneNodes.data(), GL_STATIC_DRAW);
 	glGenTextures(1, &BVHTex);
 	glBindTexture(GL_TEXTURE_BUFFER, BVHTex);
 	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, BVHBuffer);
@@ -146,7 +149,7 @@ void Renderer::InitGPUDataBuffers()
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 
-	if (!scene->envMap)
+	if (scene->envMap)
 	{
 		glGenTextures(1, &envMapTex);
 		glBindTexture(GL_TEXTURE_2D, envMapTex);
@@ -314,11 +317,11 @@ void Renderer::ReloadShaders()
 
 void Renderer::InitShaders()
 {
-	ShaderSource vertexShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "common/vertex.glsl");
-	ShaderSource pathTraceShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "tile.glsl");
-	ShaderSource pathTraceShaderLowResSrcObj = Shader::LoadFullShaderCode(shadersDir + "preview.glsl");
-	ShaderSource tonemapShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "tonemap.glsl");
-	ShaderSource outputShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "output.glsl");
+	ShaderSource vertexShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "common/vertex.vert");
+	ShaderSource pathTraceShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "tile.frag");
+	ShaderSource pathTraceShaderLowResSrcObj = Shader::LoadFullShaderCode(shadersDir + "preview.frag");
+	ShaderSource tonemapShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "tonemap.frag");
+	ShaderSource outputShaderSrcObj = Shader::LoadFullShaderCode(shadersDir + "output.frag");
 
 	// Add preprocessor defines for conditional compilation
 	std::string pathtraceDefines = "";
@@ -408,25 +411,68 @@ void Renderer::InitShaders()
 		tonemapShaderSrcObj.src.insert(idx + 1, tonemapDefines);
 	}
 
+	// 加载shader，link为program
 	pathTraceShader = LoadShaders(vertexShaderSrcObj, pathTraceShaderSrcObj);
 	pathTraceShaderLowRes = LoadShaders(vertexShaderSrcObj, pathTraceShaderLowResSrcObj);
 	outputShader = LoadShaders(vertexShaderSrcObj, outputShaderSrcObj);
 	tonemapShader = LoadShaders(vertexShaderSrcObj, tonemapShaderSrcObj);
 
+	// 设置pathTraceShader的uniform
 	pathTraceShader->use();
+	if (scene->envMap) {
+		pathTraceShader->setVec2("envMapRes", scene->envMap->width, scene->envMap->height);
+		pathTraceShader->setFloat("envMapTotalSum", scene->envMap->totalSum);
+	}
 	pathTraceShader->setVec2("resolution", (float)renderRes.x, (float)renderRes.y);
 	pathTraceShader->setVec2("invTilesNum", invTilesNum);
-	pathTraceShader->setInt("BVH", 1);
-
+	pathTraceShader->setInt("lightsNum", (int)scene->lights.size());
+	pathTraceShader->setInt("tlasBVHStartOffset", (int)scene->tlasBVHStartOffset);
+	pathTraceShader->setInt("accumTex", 0);
+	pathTraceShader->setInt("BVHTex", 1);
+	pathTraceShader->setInt("vertexIndicesTex", 2);
+	pathTraceShader->setInt("verticesTex", 3);
+	pathTraceShader->setInt("normalsTex", 4);
+	pathTraceShader->setInt("materialsTex", 5);
+	pathTraceShader->setInt("transformsTex", 6);
+	pathTraceShader->setInt("lightsTex", 7);
+	pathTraceShader->setInt("textureMapsArrayTex", 8);
+	pathTraceShader->setInt("envMapTex", 9);
+	pathTraceShader->setInt("envMapCDFTex", 10);
 	pathTraceShader->stop();
 
+	// 设置pathTraceShaderLowRes的uniform
 	pathTraceShaderLowRes->use();
-	pathTraceShaderLowRes->setInt("BVH", 1);
-
+	if (scene->envMap) {
+		pathTraceShaderLowRes->setVec2("envMapRes", scene->envMap->width, scene->envMap->height);
+		pathTraceShaderLowRes->setFloat("envMapTotalSum", scene->envMap->totalSum);
+	}
+	pathTraceShaderLowRes->setVec2("resolution", (float)renderRes.x, (float)renderRes.y);
+	pathTraceShaderLowRes->setInt("lightsNum", (int)scene->lights.size());
+	pathTraceShaderLowRes->setInt("tlasBVHStartOffset", (int)scene->tlasBVHStartOffset);
+	pathTraceShaderLowRes->setInt("accumTex", 0);
+	pathTraceShaderLowRes->setInt("BVHTex", 1);
+	pathTraceShaderLowRes->setInt("vertexIndicesTex", 2);
+	pathTraceShaderLowRes->setInt("verticesTex", 3);
+	pathTraceShaderLowRes->setInt("normalsTex", 4);
+	pathTraceShaderLowRes->setInt("materialsTex", 5);
+	pathTraceShaderLowRes->setInt("transformsTex", 6);
+	pathTraceShaderLowRes->setInt("lightsTex", 7);
+	pathTraceShaderLowRes->setInt("textureMapsArrayTex", 8);
+	pathTraceShaderLowRes->setInt("envMapTex", 9);
+	pathTraceShaderLowRes->setInt("envMapCDFTex", 10);
 	pathTraceShaderLowRes->stop();
-
 }
 
+void Renderer::Render()
+{
+}
 
+void Renderer::Present()
+{
+}
+
+void Renderer::Update(float secondsElapsed)
+{
+}
 
 NAMESPACE_END(nagi)

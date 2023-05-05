@@ -21,6 +21,7 @@ bool EnvironmentMap::LoadEnvMap(std::string & filename)
 	return true;
 }
 
+// PBRT-V3 325\328 pages. RGBToXYZ()::xyz[1]
 float Luminance(float r, float g, float b)
 {
 	return 0.212671f * r + 0.715160f * g + 0.072169f * b;

@@ -76,12 +76,14 @@ public:
 	int AddMaterial(const Material& mat);
 	int AddLight(const Light& light);
 
+	void RebuildTLAS();
+	void ProcessScene();
+
+private:
 	void CreateTLAS();
 	void CreateBLAS();
-	void Process();
 	void ProcessBLAS();
 	void ProcessTLAS();
-	void UpdateTLAS();
 
 public:
 	// TLAS, leaf is BLAS
@@ -89,7 +91,7 @@ public:
 	// 将TLAS与BLAS整合后的全部nodes
 	std::vector<LinearBVHNode> sceneNodes;
 	// TLAS开始的索引
-	uint32_t tlasStartOffset;
+	uint32_t tlasBVHStartOffset;
 	// 各个mesh的blasBVH在nodes中的开始索引
 	std::vector<uint32_t> blasBVHStartOffsets;
 

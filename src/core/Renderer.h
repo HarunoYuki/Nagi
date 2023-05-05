@@ -17,13 +17,19 @@ public:
 
 	void ResizeRenderer();
 	void ReloadShaders();
+	void Render();
+	void Present();
+	void Update(float secondsElapsed);
+	int GetSampleCount() { return sampleCounter; }
+	int GetFrameCount() { return frameCounter; }
 
+	// indicate whether renderer build was successful
 	bool initialized = false;
+
 private:
 	void InitGPUDataBuffers();
 	void InitFBOs();
 	void InitShaders();
-
 
 protected:
 	Scene* scene;

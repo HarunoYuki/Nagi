@@ -6,12 +6,13 @@
 #include "material.h"
 #include "light.h"
 #include "bvh.h"
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize.h"
 
 NAMESPACE_BEGIN(nagi)
 
-
 Scene::Scene() 
-	:camera(nullptr), envMap(nullptr), renderOptions(new RenderOptions),
+	:tlasBVH(nullptr), camera(nullptr), envMap(nullptr), renderOptions(new RenderOptions),
 	initialized(false), dirty(true), instancesModified(true), envMapModified(true) {}
 
 Scene::~Scene()
@@ -136,6 +137,10 @@ int Scene::AddLight(const Light& light)
 	return id;
 }
 
+
+// --------------------------------[BVH RELEVANT FUNCTION ]--------------------------------
+// --------------------------------[CREATE PROCESS REBUILD]--------------------------------
+
 void Scene::CreateTLAS()
 {
 	// 遍历所有instance，构建TLAS-BVH
@@ -166,7 +171,7 @@ void Scene::CreateTLAS()
 		bounds[i] = bbox3f(pmin, pmax);
 	}
 	printf("Building TLAS-BVH For Scene...\n");
-	tlasBVH = new BVHAccel(bounds);
+	tlasBVH = new BVHAccel(bounds, 1, BVHAccel::SplitMethod::SAH, 12, 1.0f);
 }
 
 void Scene::CreateBLAS()
@@ -180,17 +185,10 @@ void Scene::CreateBLAS()
 	}
 }
 
-void Scene::Process()
+
+void Scene::ProcessBLAS()
 {
-	printf("--------[BUILDING BLAS-BVH FOR EVERY MESH]--------\n");
-	CreateBLAS();
-
-	printf("--------[BUILDING TLAS-BVH FOR WHOLE SCENE]--------\n");
-	CreateTLAS();
-
-	printf("--------[INTEGRATE BLAS-BVH AND TLAS-BVH]--------\n");
-	// Add offset
-	printf("Adding offset to the blasBVH...\n");
+	printf("Copying blasBVHNodes to the scene, Adding offset for these blasBVHNodes in sceneNodes...\n");
 	// mesh的blasBVH的节点在sceneNodes中的额外偏移
 	uint32_t blasBVHRootOffset = 0;
 	// mesh的blasBVH的叶子存储的图元索引在scenePrimsVertexIndices中的额外偏移
@@ -222,11 +220,15 @@ void Scene::Process()
 		blasBVHPrimsOffset += (uint32_t)meshes[i]->blasBVH->orderedPrimsIndices.size();
 	}
 
-	// After adding offset: sceneNodes.size() == blasBVHRootOffset
-	tlasStartOffset = blasBVHRootOffset;
+	// 修正完node后有: sceneNodes.size() == blasBVHRootOffset，也是tlasBVH开始的偏移
+	tlasBVHStartOffset = blasBVHRootOffset;
+	// 提前分配将各个mesh的primIdx展开为vertexIdx，并存储在统一数组中所需的空间
+	scenePrimsVertexIndices.resize(blasBVHPrimsOffset);
+}
 
-	// Add offset
-	printf("Updating tlasBVH's information...\n");
+void Scene::ProcessTLAS()
+{
+	printf("Copying tlasBVHNodes to the scene, Updating information for these tlasBVHNodes in sceneNodes...\n");
 	// 拷贝tlasBVH的BVHNodes到scene中
 	sceneNodes.insert(sceneNodes.end(), tlasBVH->nodes.begin(), tlasBVH->nodes.end());
 #pragma omp parallel for
@@ -239,20 +241,56 @@ void Scene::Process()
 			uint32_t meshID = meshInstances[instanceIdx]->meshID;
 
 			// 记录tlasBVH的叶子节点存储的blasBVH在sceneNodes中的偏移，即起始位置
-			sceneNodes[tlasStartOffset + i].blasBVHStartOffset = blasBVHStartOffsets[meshID];
+			sceneNodes[tlasBVHStartOffset + i].blasBVHStartOffset = blasBVHStartOffsets[meshID];
 			// 记录tlasBVH的叶子节点存储的blasBVH使用的materialID
-			sceneNodes[tlasStartOffset + i].materialID = meshInstances[instanceIdx]->materialID;
+			sceneNodes[tlasBVHStartOffset + i].materialID = meshInstances[instanceIdx]->materialID;
 		}
 		else
 			// 修正中间节点存储的右子树的偏移
-			sceneNodes[tlasStartOffset + i].secondChildOffset += tlasStartOffset;
+			sceneNodes[tlasBVHStartOffset + i].secondChildOffset += tlasBVHStartOffset;
 	}
+}
+
+void Scene::RebuildTLAS()
+{
+	// delete original tlas
+	delete tlasBVH;
+	// rebuild tlas
+	CreateTLAS();
+
+	// cleanup original tlasNodes in sceneNodes
+	sceneNodes.resize(tlasBVHStartOffset);
+	// reprocess tlas
+	ProcessTLAS();
+
+	// Copy transforms
+	transforms.resize(0);
+	transforms.resize(meshInstances.size());
+	for (size_t i = 0; i < meshInstances.size(); i++)
+		transforms[i] = meshInstances[i]->transform;
+
+	instancesModified = true;
+	dirty = true;
+}
 
 
-	// Copy mesh data
-	printf("Copying mesh data to scene..\n");
-	// mesh的blasBVH的叶子存储的图元索引对应的三个顶点索引在verticesUVX、normalsUVY中的额外偏移
+void Scene::ProcessScene()
+{
+	printf("----------[BUILDING BLAS-BVH FOR EVERY MESH]---------\n");
+	CreateBLAS();
+
+	printf("----------[BUILDING TLAS-BVH FOR WHOLE SCENE]--------\n");
+	CreateTLAS();
+
+	printf("----------[INTEGRATE BLAS-BVH AND TLAS-BVH]----------\n");
+	ProcessBLAS();
+	ProcessTLAS();
+
+	printf("----------[COPYING MESH DATA TO THE SCENE]-----------\n");
+	printf("Copying mesh data to the scene, Expand the primIndex to vertexIndex...\n");
+	// mesh的blasBVH的叶子存储的图元索引对应的三个顶点索引在scene.verticesUVX、scene.normalsUVY中的额外偏移
 	uint32_t blasBVHVerticesOffset = 0;
+	size_t counter = 0;	// 计数用
 	for (size_t i = 0; i < meshes.size(); i++)
 	{
 		std::vector<uint32_t>& blasBVHPrimsIndices = meshes[i]->blasBVH->orderedPrimsIndices;
@@ -263,28 +301,60 @@ void Scene::Process()
 		{
 			// scenePrimsVertexIndices.size() = sum{meshes[x].blasBVH.orderedPrimsIndices.size() | x:[0,n)}
 			// 将mesh的orderedPrimsIndices展开为顶点索引。因为prim是三角形，所以一个orderedIdx对应三个顶点索引
-			scenePrimsVertexIndices.push_back(vec3i{ (blasBVHPrimsIndices[j] * 3 + 0) + blasBVHVerticesOffset,
-													 (blasBVHPrimsIndices[j] * 3 + 1) + blasBVHVerticesOffset,
-													 (blasBVHPrimsIndices[j] * 3 + 2) + blasBVHVerticesOffset });
+			scenePrimsVertexIndices[counter++] = vec3i{  (blasBVHPrimsIndices[j] * 3 + 0) + blasBVHVerticesOffset,
+														 (blasBVHPrimsIndices[j] * 3 + 1) + blasBVHVerticesOffset,
+														 (blasBVHPrimsIndices[j] * 3 + 2) + blasBVHVerticesOffset };
 		}
 
 		// 更新步长
-		blasBVHVerticesOffset += meshes[i]->verticesUVX.size(); // meshes[i]->verticesUVX.size() == 3*blasBVHPrimsIndicesNum
-		
+		// meshes[i]->verticesUVX.size() == 3 * meshes[i]->blasBVH->orderedPrimsIndices.size()
+		blasBVHVerticesOffset += meshes[i]->verticesUVX.size();
+
 		// 拷贝mesh的顶点、法线、uv等数据到scene中
 		verticesUVX.insert(verticesUVX.end(), meshes[i]->verticesUVX.begin(), meshes[i]->verticesUVX.end());
 		normalsUVY.insert(normalsUVY.end(), meshes[i]->normalsUVY.begin(), meshes[i]->normalsUVY.end());
 	}
 
-	// Copy meshInstance transform
-	printf("Copying meshInstance transform to scene..\n");
+	printf("----------[COPYING TRANSFORM TO THE SCENE]-----------\n");
+	printf("Copying meshInstance transform to the scene...\n");
+	transforms.resize(meshInstances.size());
 	for (size_t i = 0; i < meshInstances.size(); i++)
-		transforms.push_back(meshInstances[i]->transform);
-}
+		transforms[i] = meshInstances[i]->transform;
 
-void Scene::ProcessBLAS()
-{
-}
+	if (!textures.empty())
+	{
+		printf("----------[COPYING TEXTURES TO THE SCENE]------------\n");
+		printf("Copying and resizing textures...\n");
+		int reqWidth = renderOptions->texArrayWidth;
+		int reqHeight = renderOptions->texArrayHeight;
+		size_t texBytes = reqWidth * reqHeight * 4;
+		textureMapsArray.resize(texBytes * textures.size());
 
+#pragma omp parallel for
+		for (size_t i = 0; i < textures.size(); i++)
+		{
+			if (textures[i]->width != reqWidth || textures[i]->height != reqHeight)
+			{
+				unsigned char * resizedTex = new unsigned char[texBytes];
+				stbir_resize_uint8(&textures[i]->texData[0], textures[i]->width, textures[i]->height, 0,
+									resizedTex, reqWidth, reqHeight, 0, 4);
+				std::copy(resizedTex, resizedTex + texBytes, &textureMapsArray[i * texBytes]);
+				delete[] resizedTex;
+			}
+			else
+				std::copy(textures[i]->texData.begin(), textures[i]->texData.end(), &textureMapsArray[i * texBytes]);
+		}
+	}
+
+	if (!camera)
+	{
+		bbox3f sceneBound = tlasBVH->WorldBound();
+		vec3f diagonal = sceneBound.Diagonal();
+		vec3f center = sceneBound.Center();
+		AddCamera(vec3f(center.x, center.y, center.z + diagonal.Length()), center, 45.0f);
+	}
+
+	initialized = true;
+}
 
 NAMESPACE_END(nagi)

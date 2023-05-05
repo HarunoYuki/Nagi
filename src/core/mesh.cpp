@@ -89,7 +89,7 @@ void Mesh::BuildBVH()
 		bounds[i].grow(vec3f(verticesUVX[i * 3 + 1]));
 		bounds[i].grow(vec3f(verticesUVX[i * 3 + 2]));
 	}
-	blasBVH = new BVHAccel(bounds);
+	blasBVH = new BVHAccel(bounds, 1, BVHAccel::SplitMethod::SAH, 12, 1.0f);
 }
 
 

@@ -16,13 +16,13 @@ struct BVHPrimitiveInfo
 
 struct LinearBVHNode
 {
-	void InitLeaf(bbox3f& box, int firstPrimOffset, uint16_t nPrims)
+	void InitLeaf(bbox3f& box, uint32_t firstPrimOffset, uint16_t nPrims)
 	{
 		bounds = box;
 		primitivesOffset = firstPrimOffset;
 		nPrimitives = nPrims;
 	}
-	void InitInterior(bbox3f& box, int rightChildOffset, uint8_t axis)
+	void InitInterior(bbox3f& box, uint32_t rightChildOffset, uint16_t axis)
 	{
 		bounds = box;
 		secondChildOffset = rightChildOffset;
@@ -31,9 +31,9 @@ struct LinearBVHNode
 	}
 	bbox3f bounds;
 	union {
-		int primitivesOffset;	// used for leaf, belongs to orderedPrimsIndices
-		int secondChildOffset;	// used for interior node, belongs to nodes
-		int blasBVHStartOffset; // used for tlasBVH, indicate the start position of blasBVH stored in leaf
+		uint32_t primitivesOffset;	// used for leaf, belongs to orderedPrimsIndices
+		uint32_t secondChildOffset;	// used for interior node, belongs to nodes
+		uint32_t blasBVHStartOffset; // used for tlasBVH, indicate the start position of blasBVH stored in leaf
 	};
 	uint16_t nPrimitives; // if nPrimitives == 0, cur node is interior, otherwise leaf
 	union {
@@ -67,7 +67,9 @@ public:
 	bbox3f WorldBound();
 
 	// 方便在scene中处理blas、tlas
-	friend void Scene::Process();
+	friend void Scene::ProcessScene();
+	friend void Scene::ProcessBLAS();
+	friend void Scene::ProcessTLAS();
 
 protected:
 	// 展平后的BVHNodes
@@ -87,8 +89,8 @@ protected:
 
 private:
 	// 无指针创建BVH
-	int recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int start, int end);
-	int HLBVHBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo);
+	uint32_t recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo, int start, int end);
+	uint32_t HLBVHBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo);
 };
 
 NAMESPACE_END(nagi)
