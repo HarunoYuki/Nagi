@@ -125,6 +125,7 @@ bool ParseFromSceneFile(std::string filename, Scene* scene)
 					break;
 
 				sscanf(line, " envmapFile %s", envMapName);
+				sscanf(line, " envMapRotation %f", &options.envMapRot);
 				sscanf(line, " envmapIntensity %f", &options.envMapIntensity);
 				sscanf(line, " renderRes %d %d", &options.renderResolution.x, &options.renderResolution.y);
 				sscanf(line, " windowRes %d %d", &options.windowResolution.x, &options.windowResolution.y);

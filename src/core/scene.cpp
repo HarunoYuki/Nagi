@@ -191,8 +191,10 @@ void Scene::ProcessBLAS()
 	printf("Copying blasBVHNodes to the scene, Adding offset for these blasBVHNodes in sceneNodes...\n");
 	// mesh的blasBVH的节点在sceneNodes中的额外偏移
 	uint32_t blasBVHRootOffset = 0;
+
 	// mesh的blasBVH的叶子存储的图元索引在scenePrimsVertexIndices中的额外偏移
 	uint32_t blasBVHPrimsOffset = 0;
+
 #pragma omp parallel for
 	for (size_t i = 0; i < meshes.size(); i++)
 	{
@@ -242,8 +244,15 @@ void Scene::ProcessTLAS()
 
 			// 记录tlasBVH的叶子节点存储的blasBVH在sceneNodes中的偏移，即起始位置
 			sceneNodes[tlasBVHStartOffset + i].blasBVHStartOffset = blasBVHStartOffsets[meshID];
+
 			// 记录tlasBVH的叶子节点存储的blasBVH使用的materialID
 			sceneNodes[tlasBVHStartOffset + i].materialID = meshInstances[instanceIdx]->materialID;
+
+			// 记录tlasBVH的叶子节点存储的blasBVH的meshInstanceIdx，为了在GLSL中获取transform
+			// 需要额外+1，否则为idx为0的instance将无法判断是叶子还是中间节点
+			// meshInstanceIdx与nPrimitives同为union成员，所以此处会覆写nPrimitives的值
+			// 因为tlasBVH叶子的nPrimitives必定是1，引用一个blasBVH，所以可以覆盖
+			sceneNodes[tlasBVHStartOffset + i].meshInstanceIdx = instanceIdx + 1;
 		}
 		else
 			// 修正中间节点存储的右子树的偏移
@@ -301,9 +310,10 @@ void Scene::ProcessScene()
 		{
 			// scenePrimsVertexIndices.size() = sum{meshes[x].blasBVH.orderedPrimsIndices.size() | x:[0,n)}
 			// 将mesh的orderedPrimsIndices展开为顶点索引。因为prim是三角形，所以一个orderedIdx对应三个顶点索引
-			scenePrimsVertexIndices[counter++] = vec3i{  (blasBVHPrimsIndices[j] * 3 + 0) + blasBVHVerticesOffset,
-														 (blasBVHPrimsIndices[j] * 3 + 1) + blasBVHVerticesOffset,
-														 (blasBVHPrimsIndices[j] * 3 + 2) + blasBVHVerticesOffset };
+			int v1 = (blasBVHPrimsIndices[j] * 3 + 0) + blasBVHVerticesOffset;
+			int v2 = (blasBVHPrimsIndices[j] * 3 + 1) + blasBVHVerticesOffset;
+			int v3 = (blasBVHPrimsIndices[j] * 3 + 2) + blasBVHVerticesOffset;
+			scenePrimsVertexIndices[counter++] = vec3i{v1, v2, v2};
 		}
 
 		// 更新步长

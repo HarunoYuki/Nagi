@@ -10,8 +10,8 @@ class Bounds3
 public:
 	Vector3<T> pMin, pMax;
 	// 0点，初始化为空volume
-	Bounds3() :pMin(Vector3<T>(std::numeric_limits<T>::max())),
-		pMax(Vector3<T>(std::numeric_limits<T>::lowest())) {}
+	Bounds3() :pMin(Vector3<T>(std::numeric_limits<float>::max())),
+		pMax(Vector3<T>(std::numeric_limits<float>::lowest())) {}
 	// 1点，pMin=pMax=p
 	Bounds3(const Vector3<T>& p) :pMin(p), pMax(p) {}
 	// 2点，两点的xyz分量最小的为pMin，最大的为pMax

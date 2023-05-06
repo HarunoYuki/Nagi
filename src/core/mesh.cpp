@@ -5,6 +5,9 @@
 
 NAMESPACE_BEGIN(nagi)
 
+Mesh::Mesh() :blasBVH(nullptr) {}
+Mesh::~Mesh() { if (blasBVH) delete blasBVH; }
+
 bool Mesh::LoadMesh(std::string& filename)
 {
 	name = filename;

@@ -7,6 +7,7 @@ NAMESPACE_BEGIN(nagi)
 
 struct BVHPrimitiveInfo
 {
+	BVHPrimitiveInfo() {}
 	BVHPrimitiveInfo(int idx, bbox3f box)
 		:primitiveIdx(idx), bounds(box), centroid(bounds.Center()) {}
 	int primitiveIdx;	// primitive's idx in bounds array, its meaning equal to "bboxIdx"
@@ -14,15 +15,16 @@ struct BVHPrimitiveInfo
 	vec3f centroid;
 };
 
+// TODO: uint32_t、uint16_t范围有限，限制了scene的表示能力，如果要渲染复杂场景，可能需要更改数据类型
 struct LinearBVHNode
 {
-	void InitLeaf(bbox3f& box, uint32_t firstPrimOffset, uint16_t nPrims)
+	void InitLeaf(bbox3f& box, uint32_t firstPrimOffset, uint32_t nPrims)
 	{
 		bounds = box;
 		primitivesOffset = firstPrimOffset;
 		nPrimitives = nPrims;
 	}
-	void InitInterior(bbox3f& box, uint32_t rightChildOffset, uint16_t axis)
+	void InitInterior(bbox3f& box, uint32_t rightChildOffset, uint32_t axis)
 	{
 		bounds = box;
 		secondChildOffset = rightChildOffset;
@@ -31,17 +33,22 @@ struct LinearBVHNode
 	}
 	bbox3f bounds;
 	union {
-		uint32_t primitivesOffset;	// used for leaf, belongs to orderedPrimsIndices
-		uint32_t secondChildOffset;	// used for interior node, belongs to nodes
-		uint32_t blasBVHStartOffset; // used for tlasBVH, indicate the start position of blasBVH stored in leaf
+		uint32_t primitivesOffset;		// orderedPrimsIndices的索引，用于blasBVH的叶子节点
+		uint32_t secondChildOffset;		// nodes的索引，用于blasBVH和tlasBVH的中间节点，只需要存储右子树的idx，左子树idx为curIdx+1
+		uint32_t blasBVHStartOffset;	// sceneNodes的索引，用于tlasBVH的叶子节点，表示blasBVH的存储起点
 	};
-	uint16_t nPrimitives; // if nPrimitives == 0, cur node is interior, otherwise leaf
 	union {
-		uint16_t splitAxis;	// used for interior, indicate which axis is used to split when bvh bulid
-		uint16_t materialID;// used for tlasBVH, indicate which material is used for blasBVH stored in leaf
+		// (nodeIdx < tlasBVHStartOffset) ? blasBVh : tlasBVH
+		// blasBVH，nPrimitives == 0 是中间节点，nPrimitives != 0 是叶子存储的prim数
+		// tlasBVH，nPrimitives == 0 是中间节点，meshInstanceIdx != 0 是叶子引用的blasBVH对应的instanceIdx
+		uint32_t nPrimitives;
+		uint32_t meshInstanceIdx;		// 记录instanceIndex，为了在GLSL中遍历时访问transformTex
 	};
-	// uint8_t splitAxis;	// use for interior, indicate which axis is used to split when bvh bulid
-	// uint8_t padding;	// keep struct be n-times 32 byte
+	union {
+		uint32_t splitAxis;				// used for interior, indicate which axis is used to split when bvh bulid
+		uint32_t materialID;			// used for tlasBVH, indicate which material is used for blasBVH stored in leaf
+	};
+	// uint8_t padding;					// keep struct be n-times 32 byte
 };
 
 struct BucketInfo
@@ -67,9 +74,11 @@ public:
 	bbox3f WorldBound();
 
 	// 方便在scene中处理blas、tlas
-	friend void Scene::ProcessScene();
-	friend void Scene::ProcessBLAS();
-	friend void Scene::ProcessTLAS();
+	// 外部Scene类的友元函数不能是private，因为private将导致对外部隐藏函数声明，那么BVHAccel类就无法看到该函数
+	//friend void Scene::ProcessScene();
+	//friend void Scene::ProcessBLAS();
+	//friend void Scene::ProcessTLAS();
+	friend class Scene;
 
 protected:
 	// 展平后的BVHNodes

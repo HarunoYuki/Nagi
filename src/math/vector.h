@@ -75,6 +75,8 @@ public:
 };
 
 template <class T>
+class Vector4;
+template <class T>
 class Vector3
 {
 public:
@@ -226,25 +228,25 @@ Vector3<T> Normalize(const Vector3<T>& d)
 }
 
 template <typename T>
-T Degrees(T r)
+T Degrees(const T r)
 {
 	return r * 180.0f / PI;
 }
 
 template <typename T>
-T Radians(T d)
+T Radians(const T d)
 {
 	return d * PI / 180.0f;
 }
 
 template <typename T>
-Vector3<T> Min(Vector3<T>& a, Vector3<T>& b)
+Vector3<T> Min(const Vector3<T>& a, const Vector3<T>& b)
 {
 	return Vector3<T>(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 }
 
 template <typename T>
-Vector3<T> Max(Vector3<T>& a, Vector3<T>& b)
+Vector3<T> Max(const Vector3<T>& a, const Vector3<T>& b)
 {
 	return Vector3<T>(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }

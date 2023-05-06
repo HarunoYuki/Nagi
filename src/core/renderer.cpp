@@ -85,7 +85,7 @@ void Renderer::InitGPUDataBuffers()
 	glBufferData(GL_TEXTURE_BUFFER, sizeof(LinearBVHNode)*scene->sceneNodes.size(), scene->sceneNodes.data(), GL_STATIC_DRAW);
 	glGenTextures(1, &BVHTex);
 	glBindTexture(GL_TEXTURE_BUFFER, BVHTex);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, BVHBuffer);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, BVHBuffer);
 
 	// Create buffer and texture for vertex indices
 	glGenBuffers(1, &vertexIndicesBuffer);

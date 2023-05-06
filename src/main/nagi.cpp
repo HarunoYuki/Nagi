@@ -180,8 +180,8 @@ int main(int argc, char** argv) {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-	if(!initRenderer())
-		Error("Fail to init Renderer!");
+	//if(!initRenderer())
+	//	Error("Fail to init Renderer!");
 
 	//while (!glfwWindowShouldClose(window)) {
 	//	MainLoop(window);

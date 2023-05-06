@@ -17,7 +17,7 @@ BVHAccel::BVHAccel(std::vector<bbox3f>& bounds, int maxPrimsInNode,
 	// For each primitive to be stored in the BVH, we store 
 	// the centroid of its bounding box, its complete bounding box, and its index in the primitives array 
 	std::vector<BVHPrimitiveInfo> primitivesInfo(bounds.size());
-	for (size_t i = 0; i < bounds.size(); i++) {
+	for (int i = 0; i < bounds.size(); i++) {
 		primitivesInfo[i] = BVHPrimitiveInfo{ i, bounds[i] };
 	}
 
@@ -52,7 +52,7 @@ uint32_t BVHAccel::recursiveBuild(std::vector<BVHPrimitiveInfo>& primitivesInfo,
 	for (int i = start; i < end; i++)
 		bound.grow(primitivesInfo[i].bounds);
 
-	uint16_t nPrimitives = end - start;
+	uint32_t nPrimitives = end - start;
 	if (nPrimitives == 1) {
 		// Create leaf _LinearBVHNode_
 		uint32_t firstPrimOffset = (uint32_t)orderedPrimsIndices.size();

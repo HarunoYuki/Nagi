@@ -38,6 +38,7 @@ struct RenderOptions
 		independentRenderSize = false;
 		enableEnvMap = false;
 		envMapIntensity = 1.0f;
+		envMapRot = 0.0f;
 	}
 	vec2i renderResolution;
 	vec2i windowResolution;
@@ -60,6 +61,7 @@ struct RenderOptions
 	bool transparentBackground;
 	bool independentRenderSize;
 	float envMapIntensity;
+	float envMapRot;
 };
 
 class Scene

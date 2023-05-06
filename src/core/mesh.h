@@ -10,8 +10,8 @@ class BVHAccel;
 class Mesh
 {
 public:
-	Mesh() :blasBVH(nullptr) {}
-	~Mesh() { if (blasBVH) delete blasBVH; }
+	Mesh();
+	~Mesh();
 
 	bool LoadMesh(std::string& filename);
 	void BuildBVH();
