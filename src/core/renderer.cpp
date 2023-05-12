@@ -339,13 +339,13 @@ void Renderer::InitShaders()
 		pathtraceDefines += "#define NAGI_RR_DEPTH " + std::to_string(scene->renderOptions->RRDepth) + "\n";
 	}
 
-	//if (scene->renderOptions->enableUniformLight)
-	//	pathtraceDefines += "#define NAGI_UNIFORM_LIGHT\n";
+	if (scene->renderOptions->enableUniformLight)
+		pathtraceDefines += "#define NAGI_UNIFORM_LIGHT\n";
 
-	if (scene->renderOptions->openglNormalMap)
+	if (scene->renderOptions->enableOpenglNormalMap)
 		pathtraceDefines += "#define NAGI_OPENGL_NORMALMAP\n";
 
-	if (scene->renderOptions->hideEmitters)
+	if (scene->renderOptions->enableHideEmitters)
 		pathtraceDefines += "#define NAGI_HIDE_EMITTERS\n";
 
 	if (scene->renderOptions->enableBackground)
@@ -354,7 +354,7 @@ void Renderer::InitShaders()
 		tonemapDefines += "#define NAGI_BACKGROUND\n";
 	}
 
-	if (scene->renderOptions->transparentBackground)
+	if (scene->renderOptions->enableTransparentBackground)
 	{
 		pathtraceDefines += "#define NAGI_TRANSPARENT_BACKGROUND\n";
 		tonemapDefines += "#define NAGI_TRANSPARENT_BACKGROUND\n";
@@ -369,8 +369,8 @@ void Renderer::InitShaders()
 		}
 	}
 
-	//if (scene->renderOptions->enableRoughnessMollification)
-	//	pathtraceDefines += "#define NAGI_ROUGHNESS_MOLLIFICATION\n";
+	if (scene->renderOptions->enableRoughnessMollification)
+		pathtraceDefines += "#define NAGI_ROUGHNESS_MOLLIFICATION\n";
 
 	for (int i = 0; i < scene->materials.size(); i++)
 	{
@@ -381,8 +381,8 @@ void Renderer::InitShaders()
 		}
 	}
 
-	//if (scene->renderOptions->enableVolumeMIS)
-	//	pathtraceDefines += "#define NAGI_VOL_MIS\n";
+	if (scene->renderOptions->enableVolumeMIS)
+		pathtraceDefines += "#define NAGI_VOL_MIS\n";
 
 	if (pathtraceDefines.size() > 0)
 	{

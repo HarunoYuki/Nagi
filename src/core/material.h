@@ -38,6 +38,7 @@ public:
 		roughnessTexID = -1.0f;
 		metallicTexID = -1.0f;
 		normalMapTexID = -1.0f;
+		
 		emissionMapTexID = -1.0f;
 		opacity = 1.0f;
 		alphaMode = AlphaMode::Opaque;
